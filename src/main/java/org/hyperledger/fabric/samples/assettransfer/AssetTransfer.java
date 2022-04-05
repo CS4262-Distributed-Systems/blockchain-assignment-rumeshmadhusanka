@@ -67,17 +67,17 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Creates a new asset on the ledger.
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the new asset
-     * @param color the color of the new asset
-     * @param size the size for the new asset
-     * @param owner the owner of the new asset
+     * @param ctx            the transaction context
+     * @param assetID        the ID of the new asset
+     * @param color          the color of the new asset
+     * @param size           the size for the new asset
+     * @param owner          the owner of the new asset
      * @param appraisedValue the appraisedValue of the new asset
      * @return the created asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset CreateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue) {
+                             final String owner, final int appraisedValue) {
         ChaincodeStub stub = ctx.getStub();
 
         if (AssetExists(ctx, assetID)) {
@@ -97,7 +97,7 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Retrieves an asset with the specified ID from the ledger.
      *
-     * @param ctx the transaction context
+     * @param ctx     the transaction context
      * @param assetID the ID of the asset
      * @return the asset found on the ledger if there was one
      */
@@ -119,17 +119,17 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Updates the properties of an asset on the ledger.
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being updated
-     * @param color the color of the asset being updated
-     * @param size the size of the asset being updated
-     * @param owner the owner of the asset being updated
+     * @param ctx            the transaction context
+     * @param assetID        the ID of the asset being updated
+     * @param color          the color of the asset being updated
+     * @param size           the size of the asset being updated
+     * @param owner          the owner of the asset being updated
      * @param appraisedValue the appraisedValue of the asset being updated
      * @return the transferred asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset UpdateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue) {
+                             final String owner, final int appraisedValue) {
         ChaincodeStub stub = ctx.getStub();
 
         if (!AssetExists(ctx, assetID)) {
@@ -148,7 +148,7 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Deletes asset on the ledger.
      *
-     * @param ctx the transaction context
+     * @param ctx     the transaction context
      * @param assetID the ID of the asset being deleted
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -167,7 +167,7 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Checks the existence of the asset on the ledger
      *
-     * @param ctx the transaction context
+     * @param ctx     the transaction context
      * @param assetID the ID of the asset
      * @return boolean indicating the existence of the asset
      */
@@ -182,8 +182,8 @@ public final class AssetTransfer implements ContractInterface {
     /**
      * Changes the owner of a asset on the ledger.
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being transferred
+     * @param ctx      the transaction context
+     * @param assetID  the ID of the asset being transferred
      * @param newOwner the new owner
      * @return the old owner
      */
@@ -226,7 +226,7 @@ public final class AssetTransfer implements ContractInterface {
         // then getStateByRange will retrieve asset with keys between asset0 (inclusive) and asset9 (exclusive) in lexical order.
         QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
 
-        for (KeyValue result: results) {
+        for (KeyValue result : results) {
             Asset asset = genson.deserialize(result.getStringValue(), Asset.class);
             System.out.println(asset);
             queryResults.add(asset);
@@ -235,5 +235,29 @@ public final class AssetTransfer implements ContractInterface {
         final String response = genson.serialize(queryResults);
 
         return response;
+    }
+
+    /**
+     * Duplicates an asset. Assigns the duplicate to the new owner while keeping the original asset with the previous original owner
+     *
+     * @param ctx        the transaction context
+     * @param assetID    the ID of the asset being duplicated
+     * @param newAssetId the new ID of the asset being duplicated
+     * @param newOwner   the new owner
+     * @return the old owner
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Asset DuplicateAsset(final Context ctx, final String assetID, final String newAssetId, final String newOwner) {
+        ChaincodeStub stub = ctx.getStub();
+        String assetJSON = stub.getStringState(assetID);
+
+        if (assetJSON == null || assetJSON.isEmpty()) {
+            String errorMessage = String.format("Asset %s does not exist", assetID);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+        }
+
+        Asset assetOld = genson.deserialize(assetJSON, Asset.class);
+        return CreateAsset(ctx, newAssetId, assetOld.getColor(), assetOld.getSize(), newOwner, assetOld.getAppraisedValue());
     }
 }
